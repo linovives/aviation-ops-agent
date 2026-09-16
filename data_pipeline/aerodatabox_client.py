@@ -15,12 +15,12 @@ headers = {
 	"x-rapidapi-host": CONFIG_API_HOST
 }
 
-def search_airport(query):
+def search_airport(query: str) -> dict:
     querystring = {"withSearchByCode":"true","limit":"10","q":query}
 
     response = requests.get(url, headers=headers, params=querystring)
-    return response
+    return response.json()
 
 if __name__ == "__main__":
     res=search_airport("barcelona")
-    print(res.json())
+    print(res)
