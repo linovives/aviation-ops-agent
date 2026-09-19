@@ -25,7 +25,7 @@ def add_chunks_to_collection(chunks: list) -> None:
         embeddings=embeddings,
     )
 
-def query_regulations(question: str, top_k: int = 3) -> list:
+def query_regulations(question: str, top_k: int = 5) -> list:
     question_embedding = get_embedding(question)
 
     results = collection.query(
