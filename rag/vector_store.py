@@ -25,9 +25,19 @@ def add_chunks_to_collection(chunks: list) -> None:
         embeddings=embeddings,
     )
 
+def query_regulations(question: str, top_k: int = 3) -> list:
+    question_embedding = get_embedding(question)
+
+    results = collection.query(
+        query_embeddings=[question_embedding],
+        n_results=top_k,
+    )
+
+    return results["documents"][0]
 
 if __name__ == "__main__":
-    text = extract_pdf_text("data/regulations/flt_regulation.pdf")
-    chunks = chunk_text(text, 150, 30)
-    add_chunks_to_collection(chunks)
-    print(f"Added {len(chunks)} chunks to the collection")
+    question = "What is the minimum rest period after a flight duty period?"
+    results = query_regulations(question)
+    for result in results:
+        print(result)
+        print("---")
