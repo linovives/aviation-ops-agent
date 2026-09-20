@@ -9,12 +9,15 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "chromadb>=1.5.9",
+    "fastapi>=0.141.1",
     "groq>=1.7.0",
     "langgraph>=1.2.11",
     "pypdf>=6.19.0",
     "python-dotenv>=1.2.3",
     "requests>=2.34.2",
     "sentence-transformers>=6.1.0",
+    "torch>=2.2",
+    "uvicorn[standard]>=0.53.0",
 ]
 
 [project.scripts]
@@ -26,3 +29,18 @@ build-backend = "uv_build"
 
 [tool.uv]
 package = false
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
