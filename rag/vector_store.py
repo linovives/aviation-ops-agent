@@ -19,7 +19,7 @@ def add_chunks_to_collection(chunks: list) -> None:
         documents.append(chunk)
         embeddings.append(get_embedding(chunk))
 
-    collection.add(
+    collection.upsert(
         ids=ids,
         documents=documents,
         embeddings=embeddings,
