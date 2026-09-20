@@ -31,6 +31,17 @@ def get_airport_flights(code_type: str, code: str, from_local: str, to_local: st
         "withLocation": "false",
     }
     response = requests.get(flight_url, headers=headers, params=querystring)
+
+    if response.status_code == 204:
+        return {"departures": [], "arrivals": []}
+
+    if not response.ok:
+        try:
+            message = response.json().get("message", response.text)
+        except ValueError:
+            message = response.text or f"HTTP {response.status_code}"
+        return {"error": message}
+
     return response.json()
 
 
