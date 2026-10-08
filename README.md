@@ -124,11 +124,11 @@ The image builds the vector store from the tracked PDF at build time, so it does
 uv run python -m pytest tests/ -v
 ```
 
-28 tests covering the tool implementations, the graph's nodes and routing, the AeroDataBox client's error handling, and the API — all mocked, no real API calls or costs.
+34 tests covering the tool implementations, the graph's nodes and routing, the AeroDataBox client's error handling, and the API — all mocked, no real API calls or costs.
 
 ## Known limitations
 
-- **Groq free-tier rate limit (8000 tokens/minute)**: long conversations or questions that need both `search_flights` and `search_regulations` at once can occasionally hit this. No retry/backoff is implemented — a real production deployment on a paid tier wouldn't hit this.
-- **No defensive handling for malformed tool calls**: if the model requested a tool name outside the 3 defined ones, or sent invalid JSON arguments, the graph would raise rather than recover gracefully. Low risk with only 3 tools and forced schemas, but a known gap.
+- **Groq free-tier rate limit (8000 tokens/minute)**: long conversations or questions that need both `search_flights` and `search_regulations` at once can hit this. Rate-limited calls are retried up to 3 times with exponential backoff (5s, 10s, 20s); if the limit persists the error is raised.
+- **Malformed tool calls are recovered, not fatal**: an unknown tool name, invalid JSON arguments, or wrong argument names are returned to the model as an error message so it can correct itself on the next turn.
 - **Sessions are in-memory** in the API (`dict`, single process) — they don't survive a restart and wouldn't work across multiple workers. Fine for a demo, not for production.
 - **No frontend** — the agent is reachable via the CLI, `curl`, or the Swagger UI at `/docs`.

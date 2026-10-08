@@ -1,9 +1,10 @@
 import os
 import json
+import time
 from datetime import date
 from typing import Annotated, TypedDict
 from dotenv import load_dotenv
-from groq import Groq
+from groq import Groq, RateLimitError
 from langgraph.graph import StateGraph, END
 from rag.vector_store import query_regulations
 from agent.tools import TOOLS, AVAILABLE_TOOLS
@@ -12,6 +13,8 @@ load_dotenv()
 
 CONFIG_API_KEY = os.getenv("GROQ_API_KEY")
 CONFIG_MODEL_NAME = "openai/gpt-oss-20b"
+MAX_RETRIES = 3
+RETRY_BASE_DELAY_SECONDS = 5
 
 client = Groq(api_key=CONFIG_API_KEY)
 
@@ -46,8 +49,18 @@ class AgentState(TypedDict):
     messages: Annotated[list, _add_messages]
 
 
+def create_completion_with_retry(**kwargs):
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            return client.chat.completions.create(**kwargs)
+        except RateLimitError:
+            if attempt == MAX_RETRIES:
+                raise
+            time.sleep(RETRY_BASE_DELAY_SECONDS * 2**attempt)
+
+
 def call_model(state: AgentState) -> AgentState:
-    response = client.chat.completions.create(
+    response = create_completion_with_retry(
         model=CONFIG_MODEL_NAME,
         messages=state["messages"],
         tools=TOOLS,
@@ -72,16 +85,34 @@ def call_model(state: AgentState) -> AgentState:
     return {"messages": [message]}
 
 
+def run_tool(function_name: str, raw_arguments: str) -> str:
+    function_to_call = AVAILABLE_TOOLS.get(function_name)
+    if function_to_call is None:
+        return json.dumps({"error": f"Unknown tool '{function_name}'. Available tools: {', '.join(AVAILABLE_TOOLS)}"})
+
+    try:
+        function_args = json.loads(raw_arguments or "{}")
+    except json.JSONDecodeError as error:
+        return json.dumps({"error": f"Invalid JSON arguments: {error}"})
+
+    if not isinstance(function_args, dict):
+        return json.dumps({"error": "Tool arguments must be a JSON object"})
+
+    try:
+        function_result = function_to_call(**function_args)
+    except TypeError as error:
+        return json.dumps({"error": f"Invalid arguments for '{function_name}': {error}"})
+
+    return function_result if isinstance(function_result, str) else json.dumps(function_result)
+
+
 def execute_tools(state: AgentState) -> AgentState:
     last_message = state["messages"][-1]
     tool_messages = []
 
     for tool_call in last_message["tool_calls"]:
         function_name = tool_call["function"]["name"]
-        function_args = json.loads(tool_call["function"]["arguments"])
-        function_to_call = AVAILABLE_TOOLS[function_name]
-        function_result = function_to_call(**function_args)
-        content = function_result if isinstance(function_result, str) else json.dumps(function_result)
+        content = run_tool(function_name, tool_call["function"]["arguments"])
 
         tool_messages.append(
             {

@@ -90,3 +90,52 @@ def test_build_system_message_contains_today_and_tool_hint():
     assert message["role"] == "system"
     assert date.today().isoformat() in message["content"]
     assert "search_airport" in message["content"]
+
+
+def test_run_tool_unknown_tool():
+    result = json.loads(graph.run_tool("does_not_exist", "{}"))
+    assert "Unknown tool" in result["error"]
+
+
+def test_run_tool_invalid_json():
+    result = json.loads(graph.run_tool("search_airport", "{not json"))
+    assert "Invalid JSON" in result["error"]
+
+
+def test_run_tool_non_object_arguments():
+    result = json.loads(graph.run_tool("search_airport", "[1, 2]"))
+    assert "JSON object" in result["error"]
+
+
+def test_run_tool_wrong_arguments(monkeypatch):
+    monkeypatch.setattr(graph, "AVAILABLE_TOOLS", {"strict_tool": lambda query: query})
+    result = json.loads(graph.run_tool("strict_tool", '{"wrong": 1}'))
+    assert "Invalid arguments" in result["error"]
+
+
+def test_create_completion_with_retry_recovers_from_rate_limit(monkeypatch):
+    calls = {"count": 0}
+
+    def flaky_create(**kwargs):
+        calls["count"] += 1
+        if calls["count"] < 3:
+            raise graph.RateLimitError("slow down", response=SimpleNamespace(request=None, status_code=429, headers={}), body=None)
+        return "ok"
+
+    monkeypatch.setattr(graph.client.chat.completions, "create", flaky_create)
+    monkeypatch.setattr(graph.time, "sleep", lambda seconds: None)
+    assert graph.create_completion_with_retry(model="m", messages=[]) == "ok"
+    assert calls["count"] == 3
+
+
+def test_create_completion_with_retry_gives_up(monkeypatch):
+    def always_limited(**kwargs):
+        raise graph.RateLimitError("slow down", response=SimpleNamespace(request=None, status_code=429, headers={}), body=None)
+
+    monkeypatch.setattr(graph.client.chat.completions, "create", always_limited)
+    monkeypatch.setattr(graph.time, "sleep", lambda seconds: None)
+    try:
+        graph.create_completion_with_retry(model="m", messages=[])
+    except graph.RateLimitError:
+        return
+    raise AssertionError("expected RateLimitError")
