@@ -1,5 +1,7 @@
 # Aviation Ops Agent
 
+![CI](https://github.com/linovives/aviation-ops-agent/actions/workflows/ci.yml/badge.svg)
+
 A tool-calling AI agent that answers aviation operations questions by combining two sources: real flight schedules (AeroDataBox API) and EASA Flight Time Limitations (FTL) regulations, retrieved via RAG. Built with LangGraph orchestrating the Groq API (`openai/gpt-oss-20b`) directly through the official `groq` SDK, without `langchain-groq`.
 
 Personal portfolio project to demonstrate RAG, agent orchestration, and tool-calling in a real (if narrow) operational domain.
@@ -132,3 +134,7 @@ uv run python -m pytest tests/ -v
 - **Malformed tool calls are recovered, not fatal**: an unknown tool name, invalid JSON arguments, or wrong argument names are returned to the model as an error message so it can correct itself on the next turn.
 - **Sessions are in-memory** in the API (`dict`, single process) — they don't survive a restart and wouldn't work across multiple workers. Fine for a demo, not for production.
 - **No frontend** — the agent is reachable via the CLI, `curl`, or the Swagger UI at `/docs`.
+
+## License
+
+[PolyForm Noncommercial 1.0.0](LICENSE) — free to use, copy and modify for any noncommercial purpose. Commercial use, including selling it, is not permitted.
