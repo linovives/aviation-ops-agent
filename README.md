@@ -137,4 +137,4 @@ uv run python -m pytest tests/ -v
 
 ## License
 
-[PolyForm Noncommercial 1.0.0](LICENSE) — free to use, copy and modify for any noncommercial purpose. Commercial use, including selling it, is not permitted.
+[PolyForm Noncommercial 1.0.0](LICENSE.md) — free to use, copy and modify for any noncommercial purpose. Commercial use, including selling it, is not permitted.
